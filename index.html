@@ -2836,6 +2836,11 @@ async function promptRoundSettlement() {
                         padding-left:20px;">
 
                         <li>
+                            Record each player's current Happiness Index
+                            toward their Accumulated Happiness.
+                        </li>
+
+                        <li>
                             Distribute Pay Day.
                         </li>
 
@@ -3114,6 +3119,15 @@ async function registerNeighbor() {
         netE:0,
 
         happiness:0,
+
+        /*
+         * Accumulated Happiness records the player's Happiness
+         * Index at the end of each completed round.
+         *
+         * It is separate from the current Happiness Index.
+         */
+
+        accumulatedHappiness:0,
 
         /*
          * Actual cards currently occupying the player's house.
@@ -5292,6 +5306,31 @@ async function executeRoundEndPayments() {
     );
 
 
+    /*
+     * At the end of each completed round, capture the player's
+     * current Happiness Index and add it to Accumulated Happiness.
+     *
+     * The current Happiness Index itself is not changed by this
+     * process. It continues to represent the player's current
+     * happiness, while Accumulated Happiness represents the
+     * cumulative total across completed rounds.
+     */
+
+    players.forEach(p=>{
+
+        p.accumulatedHappiness +=
+            p.happiness;
+
+
+        appendLog(
+            `${p.name} accumulated ${p.happiness} Happiness Point(s) ` +
+            `for Round ${state.round}. ` +
+            `Accumulated Happiness is now ${p.accumulatedHappiness}.`
+        );
+
+    });
+
+
     const financialEvents = [];
 
 
@@ -5403,6 +5442,11 @@ async function executeRoundEndPayments() {
             Pay Day, utility bills, surplus payments,
             and grid fees have been processed.
 
+            <br><br>
+
+            Each player's current Happiness Index has also
+            been added to their Accumulated Happiness.
+
         </div>
 
     `;
@@ -5480,6 +5524,24 @@ async function executeRoundEndPayments() {
 
                     <strong style="color:var(--danger);">
                         -$${event.gridFee.toLocaleString()}
+                    </strong>
+
+
+                    <span>
+                        Happiness Index:
+                    </span>
+
+                    <strong style="color:#a855f7;">
+                        ${p.happiness} 😊
+                    </strong>
+
+
+                    <span>
+                        Accumulated Happiness:
+                    </span>
+
+                    <strong style="color:#a855f7;">
+                        ${p.accumulatedHappiness} pts
                     </strong>
 
 
@@ -6319,6 +6381,10 @@ function updateUserInterface() {
                                 Happiness Index
                             </th>
 
+                            <th>
+                                Accumulated Happiness
+                            </th>
+
                         </tr>
 
                     </thead>
@@ -6373,6 +6439,15 @@ function updateUserInterface() {
                                 font-weight:bold;">
 
                                 ${p.happiness} 😊
+
+                            </td>
+
+
+                            <td style="
+                                color:#a855f7;
+                                font-weight:bold;">
+
+                                ${p.accumulatedHappiness} 😊
 
                             </td>
 
@@ -6502,13 +6577,19 @@ function forceEndGame(condition) {
         );
 
 
-    let groupHappinessSum = 0;
+    /*
+     * The final neighborhood score is now based on the
+     * cumulative Accumulated Happiness earned across
+     * completed rounds, rather than the current Happiness Index.
+     */
+
+    let groupAccumulatedHappiness = 0;
 
 
     players.forEach(p=>{
 
-        groupHappinessSum +=
-            p.happiness;
+        groupAccumulatedHappiness +=
+            p.accumulatedHappiness;
 
     });
 
@@ -6523,7 +6604,7 @@ function forceEndGame(condition) {
 
 
         const finalGroupScore =
-            groupHappinessSum - 50;
+            groupAccumulatedHappiness - 50;
 
 
         subText.innerHTML = `
@@ -6536,7 +6617,7 @@ function forceEndGame(condition) {
             <strong>
                 Combined Neighborhood Score:
                 ${finalGroupScore}
-                Total Happiness Points
+                Accumulated Happiness Points
             </strong>
 
         `;
@@ -6562,8 +6643,8 @@ function forceEndGame(condition) {
 
             <strong>
                 Combined Neighborhood Score:
-                ${groupHappinessSum}
-                Total Happiness Points
+                ${groupAccumulatedHappiness}
+                Accumulated Happiness Points
             </strong>
 
         `;
@@ -6588,8 +6669,8 @@ function forceEndGame(condition) {
 
             <strong>
                 Combined Neighborhood Score:
-                ${groupHappinessSum}
-                Total Happiness Points
+                ${groupAccumulatedHappiness}
+                Accumulated Happiness Points
             </strong>
 
         `;
@@ -6606,11 +6687,18 @@ function forceEndGame(condition) {
     podium.innerHTML = "";
 
 
+    /*
+     * Rank players by Accumulated Happiness.
+     *
+     * Happiness Index remains visible as a current-state value,
+     * but it is no longer used to determine the winner.
+     */
+
     const ranked =
         [...players].sort(
             (a,b)=>
-                b.happiness -
-                a.happiness
+                b.accumulatedHappiness -
+                a.accumulatedHappiness
         );
 
 
@@ -6640,7 +6728,19 @@ function forceEndGame(condition) {
 
             &mdash;
 
-            Individual Happiness Score:
+            Accumulated Happiness Score:
+
+            <span style="
+                color:#a855f7;
+                font-weight:bold;">
+
+                ${p.accumulatedHappiness} pts
+
+            </span>
+
+            <br>
+
+            Current Happiness Index:
 
             <span style="
                 color:#a855f7;
